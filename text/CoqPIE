@@ -1,0 +1,147 @@
+Support for CoqPIE.
+
+1) "parse" and "unparse" commands.
+
+We would like these commands to convert Coq source file syntax to and from
+an xml format.  For example:
+
+parse
+"Inductive lhs =
+  | Lhs_lhs : list state -> lhs
+  | Lhs_state : state -> lhs.".
+
+should return something like
+
+"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml PUBLIC "Coq" "http://www.inria.fr">
+<coq version="1.0">
+<command>
+    <startLine>1</startLine><startChar>0</startChar>
+    <endLine>3</endLine><endChar>18</endChar>
+    <keyword>Inductive</keyword>
+    <list>
+        <case>
+            <startLine>2</startLine><startChar>0</startChar>
+            <endLine>2</endLine><endChar>31</endChar>
+            <label>
+                <startLine>2</startLine><startChar>4</startChar>
+                <endLine>2</endLine><endChar>11</endChar>
+                <class>ID</class>
+                <Id>
+                    <startLine>2</startLine><startChar>4</startChar>
+                    <endLine>2</endLine><endChar>11</endChar>
+                    Lhs_lhs
+                </Id>
+            </label>
+            <type>
+                <class>Arrow</class>
+                <startLine>2</startLine><startChar>14</startChar>
+                <endLine>2</endLine><endChar>31</endChar>
+                <left>
+                    <startLine>2</startLine><startChar>14</startChar>
+                    <endLine>2</endLine><endChar>24</endChar>
+                    <class>compose</class>
+                    <left>
+                        <class>ID</class>
+                        <Id>
+                            <startLine>2</startLine><startChar>14</startChar>
+                            <endLine>2</endLine><endChar>18</endChar>
+                            list
+                        </Id>
+                    </left>
+                    <right>
+                        <class>ID</class>
+                        <Id>
+                            <startLine>2</startLine><startChar>19</startChar>
+                            <endLine>2</endLine><endChar>24</endChar>
+                            state
+                        </Id>
+                    </right>
+                </left>
+                <right>
+                    <class>ID</class>
+                    <Id>
+                        <startLine>2</startLine><startChar>28</startChar>
+                        <endLine>2</endLine><endChar>31</endChar>
+                        lhs
+                    </Id>
+                </right>
+            </type>
+        </case>
+        <case>
+            <startLine>3</startLine><startChar>0</startChar>
+            <endLine>3</endLine><endChar>28</endChar>
+            <label>
+                <class>ID</class>
+                <Id>
+                    <startLine>3</startLine><startChar>4</startChar>
+                    <endLine>3</endLine><endChar>13</endChar>
+                    Lhs_state
+                </Id>
+            </label>
+            <type>
+                <class>Arrow</class>
+                <startLine>3</startLine><startChar>16</startChar>
+                <endLine>3</endLine><endChar>28</endChar>
+                <left>
+                    <class>ID</class>
+                    <id>
+                        <startLine>3</startLine><startChar>16</startChar>
+                        <endLine>3</endLine><endChar>21</endChar>
+                        state
+                    </id>
+                </left>
+                <right>
+                    <class>ID</class>
+                    <Id>
+                        <startLine>3</startLine><startChar>25</startChar>
+                        <endLine>3</endLine><endChar>28</endChar>
+                        lhs
+                    </Id>
+                </right>
+            </type>
+        </case>
+    </list>
+</command>"
+
+Note that the XML represents both the AST of the definition as well as containing line/character information.  It would also be nice to have a "unparse" command that reverses the parse command.
+
+2) Handling of "notation".  The Coq parser is complicated by the fact that
+custom syntax can be added using "notation" commands.  "parse" and "unparse"
+need to handle syntax defined by "notation"
+
+3) XML response for all commands (especially for error resopnse):
+
+For example, the folling command/response:
+
+Coq < Definition x = y.
+Toplevel input, characters 11-12:
+> Definition x = y.
+>            ^
+Syntax error: [vernac:def_body] expected after [Prim.identref] (in [vernac:gallina]).
+
+Coq <
+
+should be:
+
+Coq < Definition x = y.
+"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml PUBLIC "Coq" "http://www.inria.fr">
+<coq version="1.0">
+<response>
+    <class>ERROR</class>
+    <linePosition>1</linePosition>
+    <charPosition>11</charPosition>
+    <length>1</length>
+    <ErrorMessage>Syntax error: [vernac:def_body] expected after [Prim.identref] (in [vernac:gallina]).</ErrorMessage>
+</response>
+
+Coq <
+
+4) XML format for goal outputs.
+
+In addition to printing outputs to commands in xml format, CoqPIE needs the
+goal output printed after each proof step to be printed in XML format. This
+xml should have line/character information so that embedded expressions (such
+as hypotheses) can be unparsed (via the unparse_XML command).
+
